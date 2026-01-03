@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Interactivo RAC - Recopilación y Nuevas</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .stats {
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .question-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            display: none;
+            /* Oculto por defecto */
+        }
+
+        .question-card.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        .question-text {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .options {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .option-item {
+            background: #ecf0f1;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .option-item:hover {
+            background: #d5dbdb;
+        }
+
+        .option-item.selected {
+            border-color: var(--secondary-color);
+            background: #eaf2f8;
+        }
+
+        .option-item.correct {
+            background-color: #d4edda;
+            border-color: var(--success-color);
+            color: #155724;
+        }
+
+        .option-item.incorrect {
+            background-color: #f8d7da;
+            border-color: var(--error-color);
+            color: #721c24;
+        }
+
+        .btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .feedback {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .navigation {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Test de Diseño y Gestión de Redes (RAC)</h1>
+
+    <div class="controls">
+        <div class="stats" id="scoreDisplay">Puntuación: 0 / 0</div>
+        <div class="stats" id="progressDisplay">Pregunta: 1 / --</div>
+        <button class="btn" onclick="restartQuiz()">Reiniciar Test</button>
+    </div>
+
+    <div id="quizContainer">
+    </div>
+
+    <script>
+        // === BANCO DE PREGUNTAS ===
+        // Incluye las filtradas del archivo compilacion y 100 nuevas generadas
+        const questionsDB = [
+            // --- PREGUNTAS FILTRADAS DEL ARCHIVO ORIGINAL ---
+            {
+                id: 1,
+                question: "Una VLAN nativa:",
+                options: [
+                    "Es un mecanismo para implementar una red privada virtual corporativa.",
+                    "Permite definir diferentes subredes dentro de una red corporativa.",
+                    "Es la VLAN que se asigna a los paquetes sin etiqueta 802.1Q recibidos por un enlace troncal.",
+                    "Permite que un switch incorpore conmutación de nivel 3."
+                ],
+                answer: 2 // Índice 0-based (a=0, b=1, c=2, d=3)
+            },
+            {
+                id: 2,
+                question: "La diferencia entre full-cone NAPT y strict NAPT es que:",
+                options: [
+                    "El primero está pensado para realizar SNAT y el segundo para DNAT.",
+                    "El primero mapea dirección+puerto origen a otra dirección+puerto origen, mientras que el segundo también considera la dirección y puerto destinos para dicho mapeo.",
+                    "El segundo mapea dirección+puerto origen a otra dirección puerto origen, mientras que el primero también considera la dirección y puerto destinos para dicho mapeo.",
+                    "El primero es más seguro, ya que no permite ataques de spoofing como el segundo."
+                ],
+                answer: 1
+            },
+            {
+                id: 3,
+                question: "El encaminamiento entre dominios sin clases (CIDR):",
+                options: [
+                    "Permite agregar rutas.",
+                    "Es una técnica para mejorar la eficiencia de la caché de los servidores DNS.",
+                    "Permite optimizar el espacio de direcciones (menor desperdicio de direcciones).",
+                    "Las respuestas a y c son correctas."
+                ],
+                answer: 3
+            },
+            {
+                id: 4,
+                question: "La arquitectura de VLANs de una red:",
+                options: [
+                    "Es algo que se diseña fundamentalmente en la capa de acceso.",
+                    "Es algo que se diseña fundamentalmente en la capa de distribución.",
+                    "Es algo que se diseña fundamentalmente en la capa troncal.",
+                    "En general no se suele utilizar en las redes corporativas de gran tamaño."
+                ],
+                answer: 0
+            },
+            {
+                id: 6,
+                question: "Respecto al 802.3:",
+                options: [
+                    "Es un estándar que incluye sólo la subcapa LLC de la capa de enlace.",
+                    "Es un estándar que incluye la capa física, y la subcapa MAC de la capa de enlace.",
+                    "Es un estándar que estrictamente incluye toda la capa de enlace.",
+                    "Es un estándar que incluye sólo la subcapa MAC de la capa de enlace."
+                ],
+                answer: 1
+            },
+            {
+                id: 11,
+                question: "Un equipo servidor perteneciente a una red privada interna que está separada del exterior por un router de acceso, necesita ser accedido desde el exterior. ¿Cómo lo haría?",
+                options: [
+                    "Con SNAT.",
+                    "Ninguna de las anteriores respuestas es correcta.",
+                    "No es posible ya que pertenece a una red interna y privada.",
+                    "Con DNAT."
+                ],
+                answer: 3
+            },
+            {
+                id: 12,
+                question: "La conexión trunk entre dos switches soporta el tráfico de varias VLAN. Suponga que el administrador de red no dimensionó bien dichos enlaces y ahora tiene problemas de congestión. ¿Qué solución le daría que a su vez facilite la gestionabilidad y no implique coste económico?",
+                options: [
+                    "Utilizaría puertos libres para hacer agregación de enlaces dinámica aumentando así el ancho de banda disponible.",
+                    "Habría que sustituir el dispositivo por otro con las características de ancho de banda necesarias.",
+                    "Utilizaría puertos libres para hacer agregación de enlaces dinámica (LACP) configurada como trunk.",
+                    "Reduciría el número de dispositivos de finales de la red."
+                ],
+                answer: 2
+            },
+            {
+                id: 13,
+                question: "Un diseño de red jerárquico...",
+                options: [
+                    "El impacto de la caída de algún dispositivo intermedio de red tiene mayor impacto que en un diseño de red plano.",
+                    "Dificulta la adición de nuevos dispositivos frente a un diseño plano de red.",
+                    "Facilita la gestión, escalabilidad, dimensionado y solución de problemas en la red.",
+                    "Es menos gestionable que un diseño plano de red."
+                ],
+                answer: 2
+            },
+            {
+                id: 14,
+                question: "Algunas de las recomendaciones a la hora de afrontar un diseño lógico de red son, entre otras:",
+                options: [
+                    "Aumentar el diámetro de la red cuando se necesite que mejoraría su gestión.",
+                    "Evitar la utilización de cadenas que aumenten el diámetro de la red y puertas traseras que aplanan la jerarquía de red.",
+                    "Usar puertas traseras para aumentar el diámetro.",
+                    "Empezar el diseño de arriba hacia abajo para el dimensionado."
+                ],
+                answer: 1
+            },
+            {
+                id: 15,
+                question: "¿Dónde y cómo actuaría dentro de un modelo jerárquico de red para segregar tráfico para, por ejemplo, diferenciar entre diferentes tipos de tráfico?",
+                options: [
+                    "En los switches de la capa de acceso mediante la definición de VLAN.",
+                    "Se puede actuar en todas y cada una de las capas según sea necesario.",
+                    "En los switches de la capa de distribución mediante sumarización.",
+                    "En los switches de la capa núcleo mediante agregación."
+                ],
+                answer: 0
+            },
+            {
+                id: 16,
+                question: "Según el modelo OSI, ¿qué capas son independientes de la arquitectura de red subyacente?",
+                options: [
+                    "Desde la 3 hacia arriba.",
+                    "Solo la de aplicación.",
+                    "Desde la 2 hacia arriba.",
+                    "Las capas de sesión, presentación y aplicación."
+                ],
+                answer: 0
+            },
+            {
+                id: 21,
+                question: "En la fase de establecimiento en PPP, ¿qué protocolo encapsulan las tramas PPP?",
+                options: [
+                    "NCP.",
+                    "IPCP.",
+                    "CHAP.",
+                    "LCP."
+                ],
+                answer: 3
+            },
+            {
+                id: 22,
+                question: "Una vez establecido un enlace PPP entre dos partes...",
+                options: [
+                    "Todo el tráfico de red se enviará por dicho enlace de forma transparente.",
+                    "Solo parte del tráfico de red se enviará por dicho enlace.",
+                    "Todo el tráfico se reenvía por la pasarela por defecto.",
+                    "Todo el tráfico de red se enviará según las tablas de enrutamiento."
+                ],
+                answer: 0
+            },
+            {
+                id: 27,
+                question: "En una estructura de red jerárquica, se necesita ampliar el número de dispositivos finales. ¿Cuál de las siguientes opciones es la más adecuada?",
+                options: [
+                    "Todas las anteriores respuestas son correctas.",
+                    "Añadir una nueva subred replicando uno de los switches de acceso y conectando a este los nuevos dispositivos finales.",
+                    "Añadir una nueva subred en la capa de acceso aumentando así el diámetro total de la red.",
+                    "Añadir un nuevo switch multicapa en la capa Core."
+                ],
+                answer: 1
+            },
+            {
+                id: 34,
+                question: "En el contexto de redes corporativas, el diseño lógico tiene como objetivo principal:",
+                options: [
+                    "La conectividad física de los cables.",
+                    "La definición de la topología, direccionamiento IP, nombres, protocolos y seguridad.",
+                    "La compra de equipos hardware.",
+                    "La instalación de rosetas en la pared."
+                ],
+                answer: 1
+            },
+            {
+                id: 37,
+                question: "Cuando expira el tiempo máximo de tenencia de una determinada asignación IP por DHCP, ¿qué mensaje envía el cliente al servidor para solicitar una nueva IP?",
+                options: [
+                    "DHCPRELEASE.",
+                    "DHCPREQUEST.",
+                    "DHCP INFORM.",
+                    "DHCPRENEW."
+                ],
+                answer: 1
+            },
+            {
+                id: 41,
+                question: "El empleo de trunking y etiquetado de tramas en VLAN...",
+                options: [
+                    "Reduce el número de enlaces físicos entre dos switches a dos minimizando el coste.",
+                    "Aumenta la flexibilidad y escalabilidad de una VLAN.",
+                    "Aumenta la flexibilidad y escalabilidad de una VLAN, además de reducir el coste del despliegue frente a enlaces dedicados.",
+                    "Reduce el número de enlaces físicos entre dos routers a dos."
+                ],
+                answer: 2
+            },
+            {
+                id: 42,
+                question: "Desde el punto de vista de la seguridad, ¿en qué se diferencia el protocolo PPTP de otros que empleamos para establecer conexiones VPN?",
+                options: [
+                    "Utiliza protocolos de cifrado vulnerables tanto para la conexión de control como para la de datos.",
+                    "Se apoya en IPSec para proveer conexiones VPN confidenciales.",
+                    "Las tres respuestas anteriores son correctas.",
+                    "Utiliza un protocolo de cifrado vulnerable y la conexión de control es en texto plano."
+                ],
+                answer: 0
+            },
+            {
+                id: 43,
+                question: "En una red corporativa, ¿cuáles son, por regla general, las partes más comunes que se pueden observar?",
+                options: [
+                    "Oficinas remotas (branches), frontera (edge) y DMZ.",
+                    "Un campus compuesto por uno o varios edificios, con una zona DMZ y frontera, oficinas remotas y teletrabajadores.",
+                    "Un campus compuesto por uno o varios edificios, con una zona DMZ y frontera, oficinas remotas, teletrabajadores y un CPD.",
+                    "Solo el CPD y la conexión a Internet."
+                ],
+                answer: 2
+            },
+            {
+                id: 44,
+                question: "Si se quiere dar acceso a trabajadores móviles a la red corporativa de una empresa cuál de las siguientes opciones escogería:",
+                options: [
+                    "VPN, por ser más seguras con respecto a redes privadas.",
+                    "Un acceso dedicado privado para cada usuario.",
+                    "Acceso vía radio a través de la red Wifi pública.",
+                    "Acceso vía VPN para minimizar coste, garantizar acceso desde cualquier lugar y escalabilidad."
+                ],
+                answer: 3
+            },
+            {
+                id: 49,
+                question: "A la hora de elegir una tecnología para la red de acceso, ¿qué factores principales intervienen se tienen que valorar?",
+                options: [
+                    "Usuarios",
+                    "Despliegue",
+                    "Mantenimiento y explotación",
+                    "Todos los anteriores factores han de ser tenidos en cuenta"
+                ],
+                answer: 3
+            },
+
+            // --- 100 NUEVAS PREGUNTAS GENERADAS BASADAS EN EL CONTENIDO DE RAC ---
+            // TEMA 1: INTRO Y CLASIFICACIÓN
+            {
+                id: 1001,
+                question: "¿Cuál es la principal diferencia entre una red de transporte y una red de acceso?",
+                options: [
+                    "La red de transporte conecta usuarios finales, la de acceso conecta ciudades.",
+                    "La red de acceso cubre la 'última milla' hacia el usuario, mientras que la de transporte une nodos principales a alta velocidad.",
+                    "La red de transporte utiliza siempre cobre y la de acceso fibra óptica.",
+                    "No hay diferencia, son sinónimos."
+                ],
+                answer: 1
+            },
+            {
+                id: 1002,
+                question: "En la clasificación de redes según su ámbito geográfico, una red que conecta dispositivos personales en un rango de pocos metros se denomina:",
+                options: ["LAN", "WAN", "PAN", "MAN"],
+                answer: 2
+            },
+            {
+                id: 1003,
+                question: "¿Qué topología de red se caracteriza porque todos los nodos están conectados a un nodo central?",
+                options: ["Bus", "Anillo", "Estrella", "Malla completa"],
+                answer: 2
+            },
+            {
+                id: 1004,
+                question: "La topología lógica de una red se refiere a:",
+                options: [
+                    "La disposición física del cableado.",
+                    "La forma en que los datos fluyen a través de la red (ej. paso de testigo).",
+                    "La ubicación de los routers en el rack.",
+                    "El tipo de conectores utilizados."
+                ],
+                answer: 1
+            },
+            {
+                id: 1005,
+                question: "Un ejemplo de red corporativa académica mencionada en el temario es:",
+                options: ["Movistar", "RedIRIS", "Google Fiber", "Starlink"],
+                answer: 1
+            },
+
+            // TEMA 2: LAN Y ETHERNET
+            {
+                id: 2001,
+                question: "¿Cuál es la función principal del protocolo ARP?",
+                options: [
+                    "Asignar direcciones IP automáticamente.",
+                    "Traducir direcciones IP a direcciones MAC.",
+                    "Evitar bucles en la capa 2.",
+                    "Encaminar paquetes entre subredes."
+                ],
+                answer: 1
+            },
+            {
+                id: 2002,
+                question: "En una red Ethernet con Hubs (concentradores), el dominio de colisión:",
+                options: [
+                    "Se limita a cada puerto individual.",
+                    "Se extiende a todos los puertos del Hub y dispositivos conectados.",
+                    "No existe porque Ethernet es full-duplex.",
+                    "Se gestiona mediante VLANs."
+                ],
+                answer: 1
+            },
+            {
+                id: 2003,
+                question: "¿Qué dispositivo de interconexión divide los dominios de colisión pero mantiene un único dominio de difusión (por defecto)?",
+                options: ["Hub", "Repetidor", "Switch", "Router"],
+                answer: 2
+            },
+            {
+                id: 2004,
+                question: "El método de control de acceso al medio utilizado en Ethernet 802.3 (cableado) es:",
+                options: ["CSMA/CA", "Token Passing", "CSMA/CD", "TDMA"],
+                answer: 2
+            },
+            {
+                id: 2005,
+                question: "En la trama Ethernet, el campo Preamble + SFD sirve para:",
+                options: [
+                    "Indicar la longitud de los datos.",
+                    "Sincronizar el reloj del receptor con el del emisor.",
+                    "Detectar errores con CRC.",
+                    "Identificar la dirección MAC de destino."
+                ],
+                answer: 1
+            },
+            {
+                id: 2006,
+                question: "¿Qué dirección MAC se utiliza para una trama de difusión (Broadcast)?",
+                options: ["00:00:00:00:00:00", "FF:FF:FF:FF:FF:FF", "AA:BB:CC:DD:EE:FF", "192.168.1.255"],
+                answer: 1
+            },
+            {
+                id: 2007,
+                question: "La subcapa LLC (Logical Link Control) del estándar 802.3 se encarga de:",
+                options: [
+                    "El direccionamiento físico MAC.",
+                    "La codificación de señales en el cable.",
+                    "Ofrecer servicio a las capas superiores y multiplexación de protocolos.",
+                    "Detectar colisiones en el medio."
+                ],
+                answer: 2
+            },
+            {
+                id: 2008,
+                question: "En una red WLAN (802.11), el mecanismo CSMA/CA se utiliza porque:",
+                options: [
+                    "Es más rápido que CSMA/CD.",
+                    "No es posible detectar colisiones en el medio inalámbrico mientras se transmite.",
+                    "El medio inalámbrico es full-duplex.",
+                    "Permite priorizar el tráfico de voz."
+                ],
+                answer: 1
+            },
+            {
+                id: 2009,
+                question: "¿Qué es un BSS (Basic Service Set) en 802.11?",
+                options: [
+                    "Un conjunto de bridges conectados.",
+                    "El bloque básico de construcción de una WLAN, formado por estaciones y un AP (o solo estaciones en ad-hoc).",
+                    "Un sistema de seguridad WPA2.",
+                    "La velocidad base de transmisión."
+                ],
+                answer: 1
+            },
+            {
+                id: 2010,
+                question: "El problema del 'nodo oculto' en redes inalámbricas se mitiga mediante:",
+                options: ["Aumentando la potencia de transmisión.", "El uso de tramas RTS/CTS.", "Cifrado WEP.", "Antenas direccionales."],
+                answer: 1
+            },
+            {
+                id: 2011,
+                question: "Un Switch de capa 2 toma sus decisiones de reenvío basándose en:",
+                options: ["La dirección IP de destino.", "La dirección MAC de destino.", "El puerto TCP de destino.", "El protocolo de aplicación."],
+                answer: 1
+            },
+            {
+                id: 2012,
+                question: "¿Qué ocurre cuando un switch recibe una trama unicast con una MAC destino que no está en su tabla MAC?",
+                options: [
+                    "Descarta la trama.",
+                    "Envía la trama de vuelta al origen.",
+                    "Inunda (floods) la trama por todos los puertos excepto por el que la recibió.",
+                    "Envía una petición ARP al router."
+                ],
+                answer: 2
+            },
+            {
+                id: 2013,
+                question: "La tecnología PoE (Power over Ethernet) permite:",
+                options: [
+                    "Enviar datos a mayor velocidad usando electricidad.",
+                    "Alimentar eléctricamente dispositivos (como teléfonos IP o APs) a través del cable Ethernet.",
+                    "Reducir las interferencias electromagnéticas.",
+                    "Conectar fibra óptica a puertos de cobre."
+                ],
+                answer: 1
+            },
+            {
+                id: 2014,
+                question: "En el estándar 802.11, un ESS (Extended Service Set) se forma uniendo varios BSS mediante:",
+                options: ["Un cable cruzado.", "Un Sistema de Distribución (DS), habitualmente una red cableada.", "Repetidores Wi-Fi.", "Bluetooth."],
+                answer: 1
+            },
+            {
+                id: 2015,
+                question: "¿Qué campo de la trama Ethernet permite saber qué protocolo de capa superior (ej. IPv4 o IPv6) va encapsulado?",
+                options: ["Preamble", "EtherType", "FCS", "MAC Source"],
+                answer: 1
+            },
+
+            // TEMA 3: ROUTING Y SWITCHING AVANZADO
+            {
+                id: 3001,
+                question: "El objetivo principal del protocolo STP (Spanning Tree Protocol) es:",
+                options: [
+                    "Encontrar la ruta más rápida a Internet.",
+                    "Evitar bucles de capa 2 en topologías redundantes desactivando puertos lógicamente.",
+                    "Balancear la carga entre todos los enlaces disponibles.",
+                    "Proteger la red de ataques ARP Spoofing."
+                ],
+                answer: 1
+            },
+            {
+                id: 3002,
+                question: "¿Qué estado de puerto en STP permite recibir y procesar BPDUs pero NO aprende direcciones MAC ni envía datos?",
+                options: ["Blocking", "Listening", "Learning", "Forwarding"],
+                answer: 1
+            },
+            {
+                id: 3003,
+                question: "En RSTP (Rapid STP), los estados de puerto se simplifican a:",
+                options: [
+                    "Listening, Learning, Forwarding.",
+                    "Discarding, Learning, Forwarding.",
+                    "Blocking, Forwarding.",
+                    "Active, Passive."
+                ],
+                answer: 1
+            },
+            {
+                id: 3004,
+                question: "¿Qué métrica utiliza el protocolo OSPF para seleccionar la mejor ruta?",
+                options: [
+                    "Conteo de saltos.",
+                    "Ancho de banda acumulado (coste) del enlace.",
+                    "Retardo y carga.",
+                    "Fiabilidad del enlace."
+                ],
+                answer: 1
+            },
+            {
+                id: 3005,
+                question: "En OSPF, el Router ID (RID) se elige preferentemente como:",
+                options: [
+                    "La dirección IP más baja de cualquier interfaz.",
+                    "La dirección MAC del router.",
+                    "La dirección IP más alta de las interfaces Loopback configuradas.",
+                    "Aleatoriamente."
+                ],
+                answer: 2
+            },
+            {
+                id: 3006,
+                question: "Los routers OSPF envían mensajes Hello periódicamente para:",
+                options: [
+                    "Enviar las tablas de enrutamiento completas.",
+                    "Descubrir vecinos y mantener la adyacencia (Keepalive).",
+                    "Solicitar una dirección IP.",
+                    "Autenticar usuarios."
+                ],
+                answer: 1
+            },
+            {
+                id: 3007,
+                question: "En una red OSPF multiacceso (Ethernet), ¿qué función tiene el DR (Designated Router)?",
+                options: [
+                    "Actuar como servidor DHCP.",
+                    "Centralizar el intercambio de información de topología (LSA) para reducir el tráfico.",
+                    "Conectar el área OSPF con Internet.",
+                    "Filtrar paquetes maliciosos."
+                ],
+                answer: 1
+            },
+            {
+                id: 3008,
+                question: "¿Qué es la Distancia Administrativa en un router?",
+                options: [
+                    "La distancia física en kilómetros al destino.",
+                    "Un valor que indica la confiabilidad de la fuente de la ruta (menor valor = mayor preferencia).",
+                    "El tiempo que tarda un paquete en llegar.",
+                    "El número de saltos hasta el destino."
+                ],
+                answer: 1
+            },
+            {
+                id: 3009,
+                question: "Una ruta estática por defecto se configura habitualmente como:",
+                options: [
+                    "0.0.0.0/0 apuntando al siguiente salto.",
+                    "255.255.255.255/32.",
+                    "127.0.0.1.",
+                    "Una ruta aprendida por OSPF."
+                ],
+                answer: 0
+            },
+            {
+                id: 3010,
+                question: "En el contexto de VLANs, ¿qué hace el estándar 802.1Q?",
+                options: [
+                    "Cifra los datos de la VLAN.",
+                    "Añade una etiqueta (Tag) a la trama Ethernet para identificar a qué VLAN pertenece.",
+                    "Comprime los datos para ahorrar ancho de banda.",
+                    "Permite routing entre VLANs."
+                ],
+                answer: 1
+            },
+            {
+                id: 3011,
+                question: "¿Qué es el enrutamiento 'Inter-VLAN'?",
+                options: [
+                    "Conectar dos switches con un cable cruzado.",
+                    "El proceso de reenviar tráfico de una VLAN a otra, lo cual requiere un dispositivo de capa 3 (Router o Switch L3).",
+                    "El uso de una VLAN nativa.",
+                    "La comunicación entre dos PCs en la misma VLAN."
+                ],
+                answer: 1
+            },
+            {
+                id: 3012,
+                question: "El protocolo VRRP (Virtual Router Redundancy Protocol) permite:",
+                options: [
+                    "Crear VPNs seguras.",
+                    "Agrupar varios routers físicos para que funcionen como un único router virtual (gateway) ofreciendo alta disponibilidad.",
+                    "Aumentar la velocidad de los enlaces WAN.",
+                    "Evitar bucles en capa 2."
+                ],
+                answer: 1
+            },
+            {
+                id: 3013,
+                question: "En HSRP, ¿cuántos routers están en estado 'Activo' reenvíando tráfico para un grupo en un momento dado?",
+                options: ["Todos los del grupo.", "Solo uno.", "Dos (uno primario y otro secundario).", "Ninguno, HSRP es pasivo."],
+                answer: 1
+            },
+            {
+                id: 3014,
+                question: "¿Qué ventaja ofrece el enrutamiento dinámico sobre el estático?",
+                options: [
+                    "Consume menos CPU y memoria.",
+                    "Es más seguro.",
+                    "Se adapta automáticamente a los cambios en la topología (caídas de enlaces, nuevas redes).",
+                    "Es más fácil de configurar en redes muy pequeñas."
+                ],
+                answer: 2
+            },
+            {
+                id: 3015,
+                question: "Una interfaz Loopback en un router es:",
+                options: [
+                    "Una interfaz física para gestión.",
+                    "Una interfaz virtual que siempre está 'up' mientras el router funcione, útil para identificar al router.",
+                    "Un cable conectado al mismo puerto.",
+                    "Una interfaz para conectar con el ISP."
+                ],
+                answer: 1
+            },
+
+            // TEMA 4: DISEÑO DE RED
+            {
+                id: 4001,
+                question: "En el modelo de diseño jerárquico, la capa de Acceso tiene como función principal:",
+                options: [
+                    "Enrutar tráfico a alta velocidad entre sitios.",
+                    "Proporcionar conectividad a los usuarios finales y aplicar políticas de acceso (port security, VLANs).",
+                    "Agregar el tráfico de múltiples edificios.",
+                    "Conectar con Internet."
+                ],
+                answer: 1
+            },
+            {
+                id: 4002,
+                question: "La capa de Distribución en el modelo jerárquico se encarga de:",
+                options: [
+                    "Conectar teclados y ratones.",
+                    "Agregar el tráfico de la capa de acceso, aplicar políticas de seguridad (ACLs) y enrutamiento inter-VLAN.",
+                    "Mover paquetes lo más rápido posible sin analizarlos.",
+                    "Proporcionar conectividad Wi-Fi directa."
+                ],
+                answer: 1
+            },
+            {
+                id: 4003,
+                question: "La capa Núcleo (Core) debe diseñarse para:",
+                options: [
+                    "Realizar un filtrado exhaustivo de paquetes.",
+                    "Proporcionar conmutación de paquetes de alta velocidad y fiabilidad, evitando manipulaciones intensivas del tráfico.",
+                    "Conectar directamente a los PCs de usuario.",
+                    "Realizar NAT y DHCP."
+                ],
+                answer: 1
+            },
+            {
+                id: 4004,
+                question: "El concepto de 'Modularidad' en el diseño de redes permite:",
+                options: [
+                    "Comprar equipos más baratos.",
+                    "Dividir la red en bloques funcionales (Campus, Edge, WAN) para facilitar la escalabilidad y resolución de problemas.",
+                    "Usar un solo protocolo para todo.",
+                    "Evitar el uso de routers."
+                ],
+                answer: 1
+            },
+            {
+                id: 4005,
+                question: "¿Qué es el ciclo de vida PDIOO?",
+                options: [
+                    "Un protocolo de enrutamiento.",
+                    "Una metodología de diseño y gestión de redes: Plan, Design, Implement, Operate, Optimize.",
+                    "Un tipo de cable de fibra óptica.",
+                    "Un estándar de seguridad."
+                ],
+                answer: 1
+            },
+            {
+                id: 4006,
+                question: "Para mejorar el ancho de banda entre switches, la técnica de Link Aggregation (LACP / 802.3ad) permite:",
+                options: [
+                    "Comprimir los datos.",
+                    "Agrupar varios enlaces físicos para que funcionen como un único enlace lógico de mayor capacidad.",
+                    "Usar cables de categoría superior.",
+                    "Eliminar el protocolo STP."
+                ],
+                answer: 1
+            },
+            {
+                id: 4007,
+                question: "Un 'Backdoor' en el diseño de red se refiere a:",
+                options: [
+                    "Una puerta trasera en el CPD.",
+                    "Una conexión no planificada que viola la jerarquía (ej. conectar dos capas de acceso directamente), pudiendo causar bucles o problemas de routing.",
+                    "Un software de administración remota.",
+                    "Una copia de seguridad de la configuración."
+                ],
+                answer: 1
+            },
+            {
+                id: 4008,
+                question: "El término 'Diámetro de la red' hace referencia a:",
+                options: [
+                    "La longitud física de los cables.",
+                    "El número de dispositivos intermedios (saltos) que un paquete debe atravesar desde el origen al destino.",
+                    "El ancho de banda total.",
+                    "El número de usuarios conectados."
+                ],
+                answer: 1
+            },
+            {
+                id: 4009,
+                question: "¿Qué es una DMZ (Zona Desmilitarizada)?",
+                options: [
+                    "Una zona sin cobertura Wi-Fi.",
+                    "Un segmento de red situado entre la red interna (segura) e Internet (insegura), donde se ubican los servidores públicos.",
+                    "La red interna de los empleados.",
+                    "El área donde se desechan los equipos viejos."
+                ],
+                answer: 1
+            },
+            {
+                id: 4010,
+                question: "En un diseño de red, la redundancia es crucial para garantizar:",
+                options: ["La confidencialidad.", "La integridad.", "La disponibilidad (High Availability).", "El no repudio."],
+                answer: 2
+            },
+            {
+                id: 4011,
+                question: "¿Qué protocolo propietario de Cisco permite agregar enlaces físicos?",
+                options: ["LACP", "PAgP", "STP", "OSPF"],
+                answer: 1
+            },
+            {
+                id: 4012,
+                question: "Un diseño 'Collapsed Core' fusiona qué capas del modelo jerárquico:",
+                options: [
+                    "Acceso y Distribución.",
+                    "Núcleo y Distribución.",
+                    "Núcleo y Acceso.",
+                    "Todas las capas en una."
+                ],
+                answer: 1
+            },
+            {
+                id: 4013,
+                question: "Al diseñar el direccionamiento IP, usar VLSM (Variable Length Subnet Mask) permite:",
+                options: [
+                    "Usar solo máscaras /24.",
+                    "Ajustar el tamaño de las subredes al número real de hosts necesarios, optimizando el espacio de direcciones.",
+                    "Evitar el uso de routers.",
+                    "Navegar más rápido."
+                ],
+                answer: 1
+            },
+            {
+                id: 4014,
+                question: "El Enterprise Edge (Frontera Corporativa) suele contener módulos para:",
+                options: [
+                    "Conectividad WAN, Internet, VPN y acceso remoto.",
+                    "Servidores de base de datos internos.",
+                    "Usuarios del departamento de contabilidad.",
+                    "Switches de acceso de planta."
+                ],
+                answer: 0
+            },
+            {
+                id: 4015,
+                question: "La 'Granja de Servidores' (Server Farm) se suele conectar directamente a:",
+                options: [
+                    "La capa de Acceso de usuarios.",
+                    "La capa de Distribución o el Núcleo, a través de switches de alto rendimiento.",
+                    "El router del ISP directamente.",
+                    "Por Wi-Fi."
+                ],
+                answer: 1
+            },
+
+            // TEMA 5: ACCESO Y WAN
+            {
+                id: 5001,
+                question: "El protocolo PPP (Point-to-Point Protocol) opera en la capa:",
+                options: ["Física (1)", "Enlace de Datos (2)", "Red (3)", "Transporte (4)"],
+                answer: 1
+            },
+            {
+                id: 5002,
+                question: "¿Qué sub-protocolo de PPP se encarga de negociar las opciones del enlace (autenticación, compresión)?",
+                options: ["NCP", "LCP (Link Control Protocol)", "IPCP", "HDLC"],
+                answer: 1
+            },
+            {
+                id: 5003,
+                question: "¿Qué sub-protocolo de PPP se encarga de negociar los parámetros de la capa de red (como la dirección IP)?",
+                options: ["LCP", "NCP (ej. IPCP)", "CHAP", "PAP"],
+                answer: 1
+            },
+            {
+                id: 5004,
+                question: "PPPoE (PPP over Ethernet) se utiliza comúnmente en:",
+                options: [
+                    "Redes LAN corporativas internas.",
+                    "Conexiones de acceso a Internet DSL o FTTH para autenticar y gestionar la sesión del usuario.",
+                    "Enlaces satelitales exclusivamente.",
+                    "Redes Token Ring."
+                ],
+                answer: 1
+            },
+            {
+                id: 5005,
+                question: "La función principal de NAT (Network Address Translation) es:",
+                options: [
+                    "Asignar IPs dinámicas.",
+                    "Traducir direcciones IP privadas (internas) a públicas (externas) para permitir el acceso a Internet.",
+                    "Cifrar el tráfico web.",
+                    "Filtrar virus."
+                ],
+                answer: 1
+            },
+            {
+                id: 5006,
+                question: "PAT (Port Address Translation) o NAT Overload permite:",
+                options: [
+                    "Que una sola IP pública sirva para múltiples dispositivos internos usando diferentes puertos origen.",
+                    "Mapear una IP pública a una sola IP privada.",
+                    "Traducir direcciones MAC.",
+                    "Aumentar el ping."
+                ],
+                answer: 0
+            },
+            {
+                id: 5007,
+                question: "¿Qué protocolo se utiliza para asignar dinámicamente direcciones IP, máscaras y gateways a los hosts?",
+                options: ["DNS", "ARP", "DHCP", "ICMP"],
+                answer: 2
+            },
+            {
+                id: 5008,
+                question: "En una VPN 'Site-to-Site' (Sitio a Sitio):",
+                options: [
+                    "Un usuario móvil se conecta a la oficina.",
+                    "Se conectan dos redes completas (ej. sede central y sucursal) de forma permanente a través de Internet.",
+                    "No se usa cifrado.",
+                    "Solo sirve para tráfico web."
+                ],
+                answer: 1
+            },
+            {
+                id: 5009,
+                question: "¿Qué tecnología WAN utiliza etiquetas (Labels) para conmutar paquetes de forma eficiente?",
+                options: ["Frame Relay", "ATM", "MPLS", "X.25"],
+                answer: 2
+            },
+            {
+                id: 5010,
+                question: "Metro Ethernet permite:",
+                options: [
+                    "Usar tecnología Ethernet para conectar sedes dentro de un área metropolitana o amplia (WAN).",
+                    "Usar el metro para tirar cables.",
+                    "Conectarse solo a 10 Mbps.",
+                    "Usar protocolo PPP en la LAN."
+                ],
+                answer: 0
+            },
+            {
+                id: 5011,
+                question: "En una conexión de fibra FTTH (Fiber To The Home), el dispositivo en casa del usuario se suele llamar:",
+                options: ["DSLAM", "ONT (Optical Network Terminal)", "CMTS", "Antena"],
+                answer: 1
+            },
+            {
+                id: 5012,
+                question: "El protocolo de autenticación CHAP es más seguro que PAP porque:",
+                options: [
+                    "Envía la contraseña en texto plano.",
+                    "Utiliza un desafío/respuesta (Challenge/Response) con hash MD5 y la contraseña nunca viaja por la red.",
+                    "Es más rápido.",
+                    "No requiere contraseñas."
+                ],
+                answer: 1
+            },
+            {
+                id: 5013,
+                question: "¿Qué es un túnel GRE (Generic Routing Encapsulation)?",
+                options: [
+                    "Un protocolo de enrutamiento dinámico.",
+                    "Un protocolo de túnel que puede encapsular una gran variedad de protocolos dentro de paquetes IP, pero no ofrece cifrado por sí mismo.",
+                    "Una herramienta de monitoreo.",
+                    "Un tipo de VPN cifrada con AES."
+                ],
+                answer: 1
+            },
+            {
+                id: 5014,
+                question: "IPsec es un conjunto de protocolos que proporciona:",
+                options: [
+                    "Solo compresión de datos.",
+                    "Confidencialidad, integridad y autenticación para comunicaciones IP seguras (VPNs).",
+                    "Asignación de direcciones MAC.",
+                    "Servicio de correo electrónico."
+                ],
+                answer: 1
+            },
+            {
+                id: 5015,
+                question: "En una topología WAN 'Hub and Spoke':",
+                options: [
+                    "Todas las sucursales (Spokes) se conectan entre sí directamente.",
+                    "Todas las sucursales se conectan a una sede central (Hub), y el tráfico entre sucursales pasa por el Hub.",
+                    "No hay sede central.",
+                    "Es una malla completa."
+                ],
+                answer: 1
+            },
+
+            // TEMA 6: MONITORIZACIÓN Y SEGURIDAD
+            {
+                id: 6001,
+                question: "La tríada CIA en seguridad de la información se refiere a:",
+                options: [
+                    "Control, Inteligencia, Análisis.",
+                    "Confidencialidad, Integridad, Disponibilidad (Availability).",
+                    "Cifrado, Identidad, Autenticación.",
+                    "Central Intelligence Agency."
+                ],
+                answer: 1
+            },
+            {
+                id: 6002,
+                question: "Una ACL (Access Control List) Estándar filtra el tráfico basándose únicamente en:",
+                options: [
+                    "La dirección IP de origen.",
+                    "La dirección IP de destino.",
+                    "El puerto TCP/UDP.",
+                    "El protocolo."
+                ],
+                answer: 0
+            },
+            {
+                id: 6003,
+                question: "Una ACL Extendida puede filtrar basándose en:",
+                options: [
+                    "Solo la IP origen.",
+                    "IP origen, IP destino, Protocolo y Puertos (Servicios).",
+                    "Solo la dirección MAC.",
+                    "El contenido del correo electrónico."
+                ],
+                answer: 1
+            },
+            {
+                id: 6004,
+                question: "En una máscara Wildcard (usada en ACLs), un bit '0' significa:",
+                options: [
+                    "Ignorar el bit correspondiente de la IP.",
+                    "Que el bit correspondiente de la IP debe coincidir exactamente.",
+                    "Que es una red.",
+                    "Que es un host."
+                ],
+                answer: 1
+            },
+            {
+                id: 6005,
+                question: "La máscara Wildcard equivalente a la máscara de subred 255.255.255.0 es:",
+                options: ["0.0.0.0", "0.0.0.255", "255.255.255.255", "0.255.255.255"],
+                answer: 1
+            },
+            {
+                id: 6006,
+                question: "¿Qué es un IDS (Intrusion Detection System)?",
+                options: [
+                    "Un sistema que bloquea todo el tráfico.",
+                    "Un sistema que monitoriza el tráfico buscando patrones maliciosos y genera alertas, pero generalmente no bloquea activamente.",
+                    "Un firewall de capa 7.",
+                    "Un antivirus de escritorio."
+                ],
+                answer: 1
+            },
+            {
+                id: 6007,
+                question: "Un IPS (Intrusion Prevention System) se diferencia de un IDS en que:",
+                options: [
+                    "Es más barato.",
+                    "Se coloca en línea (inline) con el tráfico y puede bloquear activamente ataques en tiempo real.",
+                    "Solo monitoriza logs.",
+                    "No necesita actualizaciones."
+                ],
+                answer: 1
+            },
+            {
+                id: 6008,
+                question: "El protocolo Syslog se utiliza para:",
+                options: [
+                    "Sincronizar la hora.",
+                    "Enviar mensajes de registro (logs) y eventos desde dispositivos de red a un servidor centralizado.",
+                    "Gestionar el inicio de sesión de usuarios.",
+                    "Transferir archivos de configuración."
+                ],
+                answer: 1
+            },
+            {
+                id: 6009,
+                question: "SNMP (Simple Network Management Protocol) permite:",
+                options: [
+                    "Enviar correos.",
+                    "Monitorizar y gestionar dispositivos de red, obteniendo datos como uso de CPU, ancho de banda, etc.",
+                    "Navegar por web segura.",
+                    "Enrutar paquetes."
+                ],
+                answer: 1
+            },
+            {
+                id: 6010,
+                question: "El 'No Repudio' garantiza que:",
+                options: [
+                    "Nadie pueda leer el mensaje.",
+                    "El emisor de un mensaje no pueda negar posteriormente haberlo enviado.",
+                    "El sistema siempre esté disponible.",
+                    "Los datos no sean modificados."
+                ],
+                answer: 1
+            },
+            {
+                id: 6011,
+                question: "¿Qué es la 'Defensa en Profundidad'?",
+                options: [
+                    "Poner el firewall en el sótano.",
+                    "Implementar múltiples capas de seguridad (física, red, host, aplicación) para que si una falla, otras protejan el activo.",
+                    "Usar solo contraseñas largas.",
+                    "Contratar muchos guardias de seguridad."
+                ],
+                answer: 1
+            },
+            {
+                id: 6012,
+                question: "En una ACL, ¿qué efecto tiene la regla implícita al final de la lista?",
+                options: [
+                    "Permitir todo (permit ip any any).",
+                    "Denegar todo (deny ip any any).",
+                    "Reenviar al administrador.",
+                    "No hay regla implícita."
+                ],
+                answer: 1
+            },
+            {
+                id: 6013,
+                question: "AAA son las siglas de un marco de seguridad que significa:",
+                options: [
+                    "Authentication, Authorization, Accounting.",
+                    "Access, Availability, Analysis.",
+                    "Admin, Audit, Alert.",
+                    "Association, Agreement, Ack."
+                ],
+                answer: 0
+            },
+            {
+                id: 6014,
+                question: "¿Qué protocolo se usa habitualmente para implementar AAA (ej. autenticación centralizada de usuarios VPN)?",
+                options: ["HTTP", "RADIUS o TACACS+.", "Telnet", "SMTP"],
+                answer: 1
+            },
+            {
+                id: 6015,
+                question: "Un ataque DoS (Denial of Service) atenta principalmente contra:",
+                options: ["La Confidencialidad.", "La Integridad.", "La Disponibilidad.", "La Autenticidad."],
+                answer: 2
+            },
+            // TEMA EXTRA: GESTIÓN
+            {
+                id: 6016,
+                question: "En la gestión de redes, 'Facility' y 'Severity' son conceptos asociados a:",
+                options: ["Las rutas OSPF.", "Los mensajes Syslog.", "Las VLANs.", "El ancho de banda."],
+                answer: 1
+            },
+            {
+                id: 6017,
+                question: "¿Qué es un 'Bastion Host'?",
+                options: [
+                    "Un servidor muy potente en el núcleo.",
+                    "Un equipo expuesto en la red pública o DMZ, endurecido en seguridad, que sirve como punto de entrada.",
+                    "El ordenador del jefe.",
+                    "Un router de borde."
+                ],
+                answer: 1
+            },
+            {
+                id: 6018,
+                question: "El puerto estándar para el servicio SSH es:",
+                options: ["21", "23", "22", "80"],
+                answer: 2
+            },
+            {
+                id: 6019,
+                question: "El puerto estándar para HTTPS es:",
+                options: ["80", "443", "8080", "25"],
+                answer: 1
+            },
+            {
+                id: 6020,
+                question: "¿Qué es NetFlow?",
+                options: [
+                    "Una marca de switches.",
+                    "Un protocolo para recolectar información sobre los flujos de tráfico IP (quién comunica con quién) para monitorización.",
+                    "Un tipo de cable.",
+                    "Un antivirus."
+                ],
+                answer: 1
+            },
+            // --- MÁS PREGUNTAS VARIADAS PARA COMPLETAR ---
+            {
+                id: 7001,
+                question: "¿Qué significa que una dirección IP sea 'privada' (RFC 1918)?",
+                options: [
+                    "Que es secreta.",
+                    "Que no es enrutable en Internet y se usa en redes locales.",
+                    "Que pertenece al gobierno.",
+                    "Que es de pago."
+                ],
+                answer: 1
+            },
+            {
+                id: 7002,
+                question: "La dirección 127.0.0.1 es:",
+                options: ["Una dirección de broadcast.", "La dirección de loopback local (localhost).", "Una dirección pública.", "La puerta de enlace."],
+                answer: 1
+            },
+            {
+                id: 7003,
+                question: "En IPv6, la longitud de la dirección es de:",
+                options: ["32 bits", "64 bits", "128 bits", "256 bits"],
+                answer: 2
+            },
+            {
+                id: 7004,
+                question: "¿Cómo se representa una dirección IPv6?",
+                options: ["Decimal con puntos.", "Hexadecimal con dos puntos.", "Binario puro.", "Octal."],
+                answer: 1
+            },
+            {
+                id: 7005,
+                question: "La función 'Store and Forward' en un switch significa:",
+                options: [
+                    "Recibir la trama completa y verificar el CRC antes de reenviarla.",
+                    "Leer solo la dirección destino y reenviar inmediatamente.",
+                    "Guardar la trama en disco duro.",
+                    "Enviar la trama antes de recibirla."
+                ],
+                answer: 0
+            },
+            {
+                id: 7006,
+                question: "Un dominio de difusión (Broadcast Domain) se termina en:",
+                options: ["Un Hub.", "Un Switch.", "Un Router (capa 3).", "Un cable."],
+                answer: 2
+            },
+            {
+                id: 7007,
+                question: "¿Qué es la 'convergencia' en un protocolo de enrutamiento?",
+                options: [
+                    "Cuando los routers se reinician.",
+                    "El estado en el que todos los routers tienen una visión consistente y actualizada de la red.",
+                    "Cuando se unen dos cables.",
+                    "La velocidad de la luz."
+                ],
+                answer: 1
+            },
+            {
+                id: 7008,
+                question: "En OSPF, un Área 0 o Backbone Area es:",
+                options: [
+                    "Opcional.",
+                    "Obligatoria, todas las demás áreas deben conectarse a ella.",
+                    "Solo para redes pequeñas.",
+                    "Una zona desmilitarizada."
+                ],
+                answer: 1
+            },
+            {
+                id: 7009,
+                question: "La latencia (Latency) es:",
+                options: [
+                    "El ancho de banda máximo.",
+                    "El retardo temporal que sufre un paquete al viajar por la red.",
+                    "La pérdida de paquetes.",
+                    "La variación del retardo."
+                ],
+                answer: 1
+            },
+            {
+                id: 7010,
+                question: "El Jitter es:",
+                options: [
+                    "El ruido en la señal.",
+                    "La variación en el retardo de llegada de los paquetes.",
+                    "La velocidad de transmisión.",
+                    "Un protocolo de vídeo."
+                ],
+                answer: 1
+            },
+            {
+                id: 7011,
+                question: "¿Qué es un 'Next Hop' en una tabla de rutas?",
+                options: [
+                    "El destino final.",
+                    "La dirección IP del siguiente router al que enviar el paquete para acercarse al destino.",
+                    "El salto anterior.",
+                    "El servidor DNS."
+                ],
+                answer: 1
+            },
+            {
+                id: 7012,
+                question: "Un cable UTP Cat 6 permite velocidades de hasta:",
+                options: ["10 Mbps", "100 Mbps", "1 Gbps (y 10Gbps en distancias cortas)", "Solo analógico"],
+                answer: 2
+            },
+            {
+                id: 7013,
+                question: "La fibra óptica monomodo se utiliza principalmente para:",
+                options: ["Distancias cortas y bajo coste.", "Largas distancias y alto ancho de banda.", "Conectar el ratón.", "Audio doméstico."],
+                answer: 1
+            },
+            {
+                id: 7014,
+                question: "¿Qué es un puerto 'Trunk' en un switch?",
+                options: [
+                    "Un puerto roto.",
+                    "Un puerto configurado para transportar tráfico de múltiples VLANs (etiquetado).",
+                    "Un puerto de consola.",
+                    "Un puerto que solo admite voz."
+                ],
+                answer: 1
+            },
+            {
+                id: 7015,
+                question: "El comando 'ping' utiliza el protocolo:",
+                options: ["TCP", "UDP", "ICMP", "HTTP"],
+                answer: 2
+            },
+            {
+                id: 7016,
+                question: "El comando 'traceroute' (o tracert) sirve para:",
+                options: [
+                    "Ver la configuración IP.",
+                    "Mostrar la ruta (saltos) que siguen los paquetes hasta un destino.",
+                    "Medir la velocidad de descarga.",
+                    "Cambiar la IP."
+                ],
+                answer: 1
+            }
+        ];
+
+        // === LÓGICA DEL PROGRAMA ===
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let shuffledQuestions = [];
+
+        // Inicialización
+        window.onload = function () {
+            restartQuiz();
+        };
+
+        function restartQuiz() {
+            score = 0;
+            currentQuestionIndex = 0;
+            // Mezclar preguntas aleatoriamente
+            shuffledQuestions = [...questionsDB].sort(() => Math.random() - 0.5);
+            updateStats();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = ''; // Limpiar anterior
+
+            if (currentQuestionIndex >= shuffledQuestions.length) {
+                showFinalResults();
+                return;
+            }
+
+            const q = shuffledQuestions[currentQuestionIndex];
+
+            // Crear tarjeta de pregunta
+            const card = document.createElement('div');
+            card.className = 'question-card active';
+
+            let html = `<div class="question-text">${currentQuestionIndex + 1}. ${q.question}</div>`;
+            html += `<ul class="options">`;
+
+            q.options.forEach((opt, index) => {
+                html += `<li class="option-item" onclick="selectOption(this, ${index}, ${q.answer})">${String.fromCharCode(97 + index)}) ${opt}</li>`;
+            });
+            html += `</ul>`;
+
+            html += `<div class="feedback" id="feedback"></div>`;
+
+            html += `<div class="navigation">`;
+            html += `<button class="btn" id="nextBtn" onclick="nextQuestion()" disabled>Siguiente</button>`;
+            html += `</div>`;
+
+            card.innerHTML = html;
+            container.appendChild(card);
+
+            updateStats();
+        }
+
+        function selectOption(element, selectedIndex, correctIndex) {
+            // Evitar múltiples selecciones
+            if (document.querySelector('.option-item.selected') || document.querySelector('.option-item.correct')) return;
+
+            const options = document.querySelectorAll('.option-item');
+            const feedback = document.getElementById('feedback');
+            const nextBtn = document.getElementById('nextBtn');
+
+            if (selectedIndex === correctIndex) {
+                element.classList.add('correct');
+                score++;
+                feedback.innerHTML = "<strong>¡Correcto!</strong>";
+                feedback.style.color = "#155724";
+                feedback.style.backgroundColor = "#d4edda";
+            } else {
+                element.classList.add('incorrect');
+                options[correctIndex].classList.add('correct'); // Mostrar la correcta
+                feedback.innerHTML = "<strong>Incorrecto.</strong> La respuesta correcta era la " + String.fromCharCode(97 + correctIndex) + ".";
+                feedback.style.color = "#721c24";
+                feedback.style.backgroundColor = "#f8d7da";
+            }
+
+            feedback.style.display = "block";
+            nextBtn.disabled = false;
+            updateStats();
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        function updateStats() {
+            document.getElementById('scoreDisplay').innerText = `Puntuación: ${score} / ${shuffledQuestions.length}`;
+            document.getElementById('progressDisplay').innerText = `Pregunta: ${Math.min(currentQuestionIndex + 1, shuffledQuestions.length)} / ${shuffledQuestions.length}`;
+        }
+
+        function showFinalResults() {
+            const container = document.getElementById('quizContainer');
+            const percentage = Math.round((score / shuffledQuestions.length) * 100);
+
+            let msg = "";
+            if (percentage >= 90) msg = "¡Excelente dominio del temario!";
+            else if (percentage >= 70) msg = "Muy bien, tienes buenos conocimientos.";
+            else if (percentage >= 50) msg = "Aprobado, pero repasa los conceptos clave.";
+            else msg = "Necesitas estudiar más los temas de RAC.";
+
+            container.innerHTML = `
+                <div class="question-card active" style="text-align: center;">
+                    <h2>Test Finalizado</h2>
+                    <p style="font-size: 1.5em; margin: 20px 0;">Tu puntuación final: <strong>${score}</strong> de ${shuffledQuestions.length} (${percentage}%)</p>
+                    <p>${msg}</p>
+                    <button class="btn" onclick="restartQuiz()">Repetir Test</button>
+                </div>
+            `;
+
+            // Ocultar stats en pantalla final
+            document.getElementById('progressDisplay').innerText = "";
+        }
+    </script>
+</body>
+
+</html>
